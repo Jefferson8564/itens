@@ -287,12 +287,11 @@
     </div>
 </div>
 
-<!-- ── SEM PEDIDO SALVO ── -->
+<!-- ── AGUARDANDO LINK ── -->
 <div id="telaSemPedido" class="tela oculta">
-    <div class="sem-emoji">⭐</div>
-    <div class="sem-titulo">Nenhum pedido salvo</div>
-    <div class="sem-sub">Acesse o app, monte seu pedido favorito e salve com o botão ⭐ para usar aqui.</div>
-    <a href="index.html" class="btn-voltar">← Ir para o app</a>
+    <div class="sem-emoji">🔗</div>
+    <div class="sem-titulo">Aguardando link</div>
+    <div class="sem-sub">Abra o link de pedido enviado pelo WhatsApp para continuar.</div>
 </div>
 
 <!-- ── POPUP: PEDIDO ANTERIOR ── -->
@@ -557,6 +556,8 @@ function lerItensURL() {
 
 // ── FAZER PEDIDO ──────────────────────────────────────────────
 async function fazerPedido() {
+    const params = window.location.search; // ex: "?=salvos" | "?fritos=10+Frango=10..."
+
     mostrar('telaConfirm');
     roboEstado('salvando');
 
@@ -566,21 +567,16 @@ async function fazerPedido() {
     if (!client) { roboEstado('nao'); return; }
     user = { ...user, debt: client.debt, saved_order: client.saved_order, saved_order_total: client.saved_order_total };
 
-    // ── Tenta montar pedido a partir da URL ──
-    const urlPedido = lerItensURL();
-
     let pedidoTexto, total;
 
-    if (urlPedido) {
-        // Veio via link com produtos na URL
-        pedidoTexto = urlPedido.pedidoTexto;
-        total       = urlPedido.total;
-    } else {
-        // Fallback: usa o pedido salvo no banco
+    const isSalvos = params.includes('=salvos');
+
+    if (isSalvos) {
+        // ── Modo ?=salvos → usa pedido salvo do banco ──
         const savedOrder = (client.saved_order || '').trim();
         if (!savedOrder) {
-            document.getElementById('telaConfirm').classList.remove('oculta');
-            mostrar('telaSemPedido');
+            // Sem pedido salvo → WhatsApp imediatamente
+            window.location.href = `https://api.whatsapp.com/send?phone=55${ADMIN_NUM}`;
             return;
         }
 
@@ -601,7 +597,23 @@ async function fazerPedido() {
             }
         }
         if (total === 0) total = Number(client.saved_order_total) || 0;
+        if (total === 0) {
+            // Pedido salvo sem valor reconhecido → WhatsApp imediatamente
+            window.location.href = `https://api.whatsapp.com/send?phone=55${ADMIN_NUM}`;
+            return;
+        }
         pedidoTexto = savedOrder;
+
+    } else {
+        // ── Modo ?fritos=10+... → usa produtos da URL ──
+        const urlPedido = lerItensURL();
+        if (!urlPedido) {
+            // URL com params mas nenhum produto reconhecido → WhatsApp imediatamente
+            window.location.href = `https://api.whatsapp.com/send?phone=55${ADMIN_NUM}`;
+            return;
+        }
+        pedidoTexto = urlPedido.pedidoTexto;
+        total       = urlPedido.total;
     }
 
     // Crédito
@@ -773,6 +785,12 @@ async function iniciarPedido() {
 
 // ── INIT ──────────────────────────────────────────────────────
 window.onload = async () => {
+    // ── Sem parâmetros na URL → fica aguardando, não faz nada ──
+    if (!window.location.search) {
+        mostrar('telaSemPedido');
+        return;
+    }
+
     // Timeout de segurança: 10s sem resposta → tela de login
     const guard = setTimeout(() => mostrar('telaLogin'), 10000);
 
