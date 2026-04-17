@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Pedido Rápido 🍗</title>
+    <title>Pagamento PIX 💸</title>
     <link rel="icon" href="icone.png">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -138,116 +138,118 @@
         .btn-entrar:active { transform: scale(0.97); }
         .btn-entrar:disabled { opacity: 0.65; cursor: not-allowed; }
 
-        /* ── POPUP PEDIDO ANTERIOR ── */
-        #popupDuplicata {
-            position: fixed; inset: 0; z-index: 500;
-            background: rgba(0,0,0,0.75); backdrop-filter: blur(10px);
-            display: none; align-items: center; justify-content: center;
-            padding: 24px;
+        /* ── COMPROVANTE ── */
+        #telaComprovante {
+            background: #0d0508;
+            overflow-y: auto;
+            z-index: 5;
         }
-        #popupDuplicata.ativo { display: flex; }
-        .dup-card {
-            background: #1c2340; border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 24px; padding: 28px 24px;
-            max-width: 360px; width: 100%; text-align: center;
-            animation: cardIn 0.3s ease both;
+        .comp-card {
+            position: relative; z-index: 2;
+            width: 100%; max-width: 360px;
+            animation: cardIn 0.6s cubic-bezier(0.34,1.2,0.64,1) both;
         }
 
-        /* ── CONFIRMAÇÃO (ROBÔ) ── */
-        #telaConfirm {
-            background: transparent;
-            z-index: 20;
-        }
-        #telaConfirm.ativo {
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(8px);
+        .comp-header { text-align: center; margin-bottom: 20px; }
+        .comp-title { font-size: 24px; font-weight: 900; color: white; }
+
+        .comp-box {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px; padding: 24px;
+            margin-bottom: 16px;
         }
 
-        @keyframes roboEntrar {
-            0%   { transform: translateY(90px) scale(0.4); opacity:0; }
-            60%  { transform: translateY(-18px) scale(1.08); opacity:1; }
-            100% { transform: translateY(0) scale(1); opacity:1; }
+        .comp-row {
+            display: flex; flex-direction: column;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
         }
-        @keyframes roboSalvando { 0%,100%{transform:translateY(0) rotate(-3deg);} 50%{transform:translateY(-10px) rotate(3deg);} }
-        @keyframes roboSim { 0%,100%{transform:rotate(-12deg) scale(1.08);} 50%{transform:rotate(12deg) scale(1.08);} }
-        @keyframes roboNao {
-            0%,100%{transform:translateX(0);} 20%{transform:translateX(-14px);} 40%{transform:translateX(14px);}
-            60%{transform:translateX(-10px);} 80%{transform:translateX(10px);}
+        .comp-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .comp-row:first-child { padding-top: 0; }
+
+        .comp-row-label {
+            font-size: 10px; font-weight: 700;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase; letter-spacing: 1.5px;
+            margin-bottom: 3px;
         }
-        @keyframes badgeIn {
-            0%{transform:scale(0) rotate(-30deg);opacity:0;}
-            70%{transform:scale(1.3) rotate(5deg);opacity:1;}
-            100%{transform:scale(1) rotate(0);opacity:1;}
+        .comp-row-value {
+            font-size: 15px; font-weight: 700; color: white;
         }
-        @keyframes particula {
-            0%{transform:translate(0,0) scale(1);opacity:1;}
-            100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0;}
+        .comp-valor-big {
+            font-size: 28px; font-weight: 900;
+            background: linear-gradient(135deg, #25d366, #1aad52);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
 
-        .robo-wrap {
-            position: relative;
+        .comp-cliente-box {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 14px 16px;
+            margin-bottom: 16px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .comp-avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: linear-gradient(135deg, #e8732a, #c75b24);
             display: flex; align-items: center; justify-content: center;
-            animation: roboEntrar 0.7s cubic-bezier(0.34,1.56,0.64,1) both;
-            padding: 10px;
+            font-size: 18px; font-weight: 900; color: white; flex-shrink: 0;
         }
-        .robo-emoji { font-size: 110px; display: block; }
-        .robo-badge {
-            position: absolute; bottom: -10px; right: -10px;
-            font-size: 44px; display: none;
-            animation: badgeIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.4s both;
-        }
-        .robo-texto {
-            text-align: center; margin-top: 28px; padding: 0 24px;
-            animation: textoSubir 0.5s ease 0.5s both;
-        }
-        @keyframes textoSubir { from{opacity:0;transform:translateY(18px);} to{opacity:1;transform:translateY(0);} }
-        .robo-titulo { font-size: 26px; font-weight: 900; color: white; letter-spacing: -0.5px; margin-bottom: 8px; }
-        .robo-sub { font-size: 15px; color: rgba(255,255,255,0.7); font-weight: 600; }
-        .robo-particula { position: absolute; font-size: 22px; animation: particula 0.8s ease-out forwards; }
+        .comp-cliente-name { font-size: 14px; font-weight: 800; color: white; }
+        .comp-cliente-debt { font-size: 12px; color: rgba(255,255,255,0.45); font-weight: 500; margin-top: 2px; }
+        .comp-cliente-debt span { color: #f39c12; font-weight: 700; }
 
-        .state-salvando .robo-emoji {
-            filter: drop-shadow(0 0 20px rgba(241,196,15,0.8));
-            animation: roboSalvando 0.7s ease-in-out infinite;
+        .btn-confirmar {
+            width: 100%; padding: 16px;
+            background: linear-gradient(135deg, #25d366, #1aad52, #128a3e);
+            color: white; border: none; border-radius: 16px;
+            font-size: 16px; font-weight: 800; cursor: pointer;
+            box-shadow: 0 8px 28px rgba(37,211,102,0.4);
+            transition: transform 0.15s;
+            position: relative; overflow: hidden;
         }
-        .state-sim .robo-emoji {
-            filter: drop-shadow(0 0 30px rgba(37,211,102,0.9));
-            animation: roboSim 0.45s ease-in-out infinite;
+        .btn-confirmar::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+            animation: shimmer 2.5s linear infinite;
         }
-        .state-nao .robo-emoji {
-            filter: drop-shadow(0 0 30px rgba(231,76,60,0.9));
-            animation: roboNao 0.5s ease-in-out 3;
+        .btn-confirmar:active { transform: scale(0.97); }
+        .btn-confirmar:disabled { opacity: 0.65; cursor: not-allowed; }
+
+        .comp-status {
+            text-align: center;
+            font-size: 14px; font-weight: 700;
+            width: 100%; margin-top: 16px;
+            padding: 12px 16px; border-radius: 14px;
+        }
+        .comp-status.sucesso {
+            color: #25d366;
+            background: rgba(37,211,102,0.08);
+            border: 1px solid rgba(37,211,102,0.2);
+        }
+        .comp-status.duplicado {
+            color: #e74c3c;
+            background: rgba(231,76,60,0.08);
+            border: 1px solid rgba(231,76,60,0.2);
         }
 
-        /* ── SEM PEDIDO SALVO ── */
-        #telaSemPedido {
+
+        /* ── SEM LINK ── */
+        #telaSemLink {
             background: #0d0508;
             text-align: center; gap: 16px;
         }
         .sem-emoji { font-size: 64px; }
         .sem-titulo { font-size: 22px; font-weight: 900; color: white; }
         .sem-sub { font-size: 14px; color: rgba(255,255,255,0.45); font-weight: 500; line-height: 1.6; max-width: 300px; }
-        .btn-voltar {
-            margin-top: 8px; padding: 14px 28px;
-            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 14px; color: white; font-size: 14px; font-weight: 700;
-            cursor: pointer; text-decoration: none; display: inline-block;
-        }
-
-        /* spinner inline */
-        .spinner {
-            width: 32px; height: 32px;
-            border: 3px solid rgba(255,255,255,0.2);
-            border-top-color: white; border-radius: 50%;
-            animation: spin 0.75s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
 <!-- ── LOADING ── -->
 <div id="telaLoading" class="tela">
-    <div class="load-logo">🍗</div>
+    <div class="load-logo">💸</div>
 </div>
 
 <!-- ── LOGIN ── -->
@@ -259,7 +261,7 @@
             <img src="icone.png" class="login-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
             <div style="font-size:80px;display:none;">🍗</div>
             <div class="login-brand">O Rei da <span>Coxinha</span></div>
-            <div class="login-sub">Pedido rápido ⚡</div>
+            <div class="login-sub">Confirmar pagamento 💸</div>
         </div>
 
         <div class="login-box">
@@ -270,7 +272,8 @@
                 <span class="prefix">📱 819</span>
                 <input id="userPhone" class="field-input" type="tel" inputmode="numeric"
                     placeholder="9XXXX-XXXX" maxlength="10"
-                    onkeydown="if(event.key==='Enter')auth()">
+                    onkeydown="if(event.key==='Enter')auth()"
+                    onblur="auth()">
             </div>
 
             <div id="nameBox">
@@ -280,135 +283,119 @@
                     onkeydown="if(event.key==='Enter')auth()">
             </div>
 
-            <button id="btnLogin" class="btn-entrar" onclick="auth()">
-                🚀 Entrar e Pedir
+            <button id="btnLogin" class="btn-entrar" onclick="auth()" style="display:none;">
+                🚀 Entrar e Confirmar
             </button>
         </div>
     </div>
 </div>
 
-<!-- ── AGUARDANDO LINK ── -->
-<div id="telaSemPedido" class="tela oculta">
+<!-- ── COMPROVANTE ── -->
+<div id="telaComprovante" class="tela oculta">
+    <div class="orb orb1" style="background:radial-gradient(circle,rgba(37,211,102,0.2) 0%,transparent 70%);"></div>
+    <div class="comp-card">
+
+        <!-- Info do cliente — TOPO -->
+        <div class="comp-cliente-box">
+            <div class="comp-avatar" id="clienteAvatar">?</div>
+            <div>
+                <div class="comp-cliente-name" id="clienteNome">—</div>
+                <div class="comp-cliente-debt">Dívida atual: <span id="clienteDebt">R$ 0,00</span></div>
+            </div>
+        </div>
+
+        <!-- Título -->
+        <div class="comp-header">
+            <div class="comp-title">Comprovante PIX</div>
+        </div>
+
+        <!-- Dados do comprovante -->
+        <div class="comp-box">
+            <div class="comp-row">
+                <div class="comp-row-label">Valor</div>
+                <div class="comp-row-value comp-valor-big" id="compValor">—</div>
+            </div>
+            <div class="comp-row">
+                <div class="comp-row-label">Data e Hora</div>
+                <div class="comp-row-value" id="compDataHora">—</div>
+            </div>
+            <div class="comp-row">
+                <div class="comp-row-label">Quem recebeu (Destino)</div>
+                <div class="comp-row-value" id="compDestino">—</div>
+            </div>
+        </div>
+
+        <div id="compStatus" class="comp-status"></div>
+    </div>
+</div>
+
+
+<!-- ── SEM LINK ── -->
+<div id="telaSemLink" class="tela oculta">
     <div class="sem-emoji">🔗</div>
-    <div class="sem-titulo">Aguardando link</div>
-    <div class="sem-sub">Abra o link de pedido enviado pelo WhatsApp para continuar.</div>
-</div>
-
-<!-- ── POPUP: PEDIDO ANTERIOR ── -->
-<div id="popupDuplicata">
-    <div class="dup-card">
-        <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
-        <div style="font-size:19px;font-weight:900;color:white;margin-bottom:10px;">Pedido anterior encontrado!</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.6);font-weight:500;line-height:1.5;margin-bottom:22px;">
-            Você já fez um pedido há <span id="tempoAnterior" style="color:#f39c12;font-weight:800;">--</span>.<br>
-            O que deseja fazer?
-        </div>
-        <div style="display:flex;gap:10px;">
-            <button onclick="resolverDuplicata('manter')" style="
-                flex:1;padding:14px;background:linear-gradient(135deg,#1aad52,#25d366);
-                border:none;border-radius:14px;color:white;font-size:14px;font-weight:800;cursor:pointer;">
-                ✅ Manter os 2
-            </button>
-            <button onclick="resolverDuplicata('cancelar')" style="
-                flex:1;padding:14px;background:linear-gradient(135deg,#c0392b,#e74c3c);
-                border:none;border-radius:14px;color:white;font-size:14px;font-weight:800;cursor:pointer;">
-                ❌ Cancelar anterior
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- ── CONFIRMAÇÃO (ROBÔ) ── -->
-<div id="telaConfirm" class="tela oculta">
-    <div id="roboInner" class="state-salvando">
-        <div class="robo-wrap" id="roboWrap">
-            <span class="robo-emoji">🤖</span>
-            <span class="robo-badge" id="roboBadge"></span>
-        </div>
-        <div class="robo-texto">
-            <div class="robo-titulo" id="roboTitulo">Salvando pedido...</div>
-            <div class="robo-sub" id="roboSub">☁️ Aguarde um segundo!</div>
-        </div>
-    </div>
+    <div class="sem-titulo">Link inválido</div>
+    <div class="sem-sub">Este link de pagamento não contém dados válidos.</div>
 </div>
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
 const SUPABASE_URL  = "https://vpeyqgijajywgswmezlh.supabase.co";
 const SUPABASE_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwZXlxZ2lqYWp5d2dzd21lemxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNTM1MDIsImV4cCI6MjA4NjgyOTUwMn0.LA5Cbof7IKWAA7l8YbCuPzANpCy0rX_Dro4l9fcDgoQ";
-const ADMIN_NUM     = "81996603348";
 const PHONE_ALIASES = { "81987650178": "81986633773" };
 
-const sb  = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let user     = null;
-let products = [];
-let msgTemplate = "*NOVO PEDIDO*\nCliente: {nome}\n\n{pedido}\nTotal: R$ {total}\nPagamento: {pagamento}";
+let pixDados = null; // { valor, valorNum, data, hora, destino, plataforma }
 
-// ── FUSO HORÁRIO SP ──────────────────────────────────────────
-function _partesSP(d) {
-    const fmt = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/Sao_Paulo',
-        year:'numeric', month:'2-digit', day:'2-digit',
-        hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false
-    });
-    return Object.fromEntries(fmt.formatToParts(d || new Date()).filter(x => x.type !== 'literal').map(x => [x.type, x.value]));
-}
-function horasBRT(d) {
-    const p = _partesSP(d);
-    return new Date(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`);
+// ── PARSE URL PIX ────────────────────────────────────────────
+// Formato: ?R$20,00=16/04/2026=09:54:34=JeffersonLeandro=PicPay
+function parsearURLPix() {
+    const search = decodeURIComponent(window.location.search);
+    if (!search) return null;
+
+    // Remove o '?' inicial e divide por '='
+    const raw = search.substring(1);
+    const partes = raw.split('=');
+
+    if (partes.length < 4) return null;
+
+    const valorRaw    = partes[0]; // ex: "R$20,00"
+    const data        = partes[1]; // ex: "16/04/2026"
+    const hora        = partes[2]; // ex: "09:54:34"
+    const nomeRaw     = partes[3]; // ex: "JeffersonLeandro"
+    const plataforma  = partes[4] || ''; // ex: "PicPay"
+
+    // Parseia valor: "R$20,00" → 20.00
+    const valorNum = parseFloat(
+        valorRaw.replace('R$','').replace(/\./g,'').replace(',','.')
+    );
+    if (isNaN(valorNum) || valorNum <= 0) return null;
+
+    // Formata nome (CamelCase → "Jefferson Leandro")
+    const nomeFormatado = nomeRaw.replace(/([a-z])([A-Z])/g, '$1 $2');
+
+    const destino = plataforma
+        ? `${nomeFormatado} (via ${plataforma})`
+        : nomeFormatado;
+
+    return {
+        valor:      valorRaw.startsWith('R$') ? valorRaw : `R$ ${valorRaw}`,
+        valorNum,
+        data,
+        hora,
+        destino
+    };
 }
 
 // ── TELAS ────────────────────────────────────────────────────
 function mostrar(id) {
-    ['telaLoading','telaLogin','telaConfirm','telaSemPedido'].forEach(t => {
+    ['telaLoading','telaLogin','telaComprovante','telaSemLink'].forEach(t => {
         document.getElementById(t).classList.add('oculta');
     });
     const el = document.getElementById(id);
     el.classList.remove('oculta');
-    if (id === 'telaConfirm') setTimeout(() => el.classList.add('ativo'), 50);
 }
 
-// ── ROBÔ ─────────────────────────────────────────────────────
-function roboEstado(estado) {
-    const inner  = document.getElementById('roboInner');
-    const badge  = document.getElementById('roboBadge');
-    const titulo = document.getElementById('roboTitulo');
-    const sub    = document.getElementById('roboSub');
-    inner.className = 'state-' + estado;
-    if (estado === 'salvando') {
-        badge.style.display = 'none';
-        titulo.textContent = 'Salvando pedido...';
-        sub.textContent = '☁️ Aguarde um segundo!';
-        sub.style.color = 'rgba(255,255,255,0.7)';
-    } else if (estado === 'sim') {
-        badge.style.display = 'block';
-        badge.textContent = '✅';
-        titulo.textContent = 'Pedido confirmado!';
-        sub.textContent = 'Abrindo WhatsApp... 📲';
-        sub.style.color = 'rgba(255,255,255,0.7)';
-        // Partículas
-        const wrap = document.getElementById('roboWrap');
-        ['🎉','⭐','✨','🎊','💚','🎉','⭐','✨'].forEach((emoji, i) => {
-            const p = document.createElement('span');
-            p.className = 'robo-particula';
-            p.textContent = emoji;
-            const angle = (i / 8) * 360;
-            const dist  = 90 + Math.random() * 60;
-            p.style.setProperty('--dx', Math.cos(angle * Math.PI/180) * dist + 'px');
-            p.style.setProperty('--dy', Math.sin(angle * Math.PI/180) * dist + 'px');
-            p.style.animationDelay    = (0.1 + i * 0.07) + 's';
-            p.style.animationDuration = '0.7s';
-            wrap.appendChild(p);
-            setTimeout(() => p.remove(), 1500);
-        });
-    } else if (estado === 'nao') {
-        badge.style.display = 'block';
-        badge.textContent = '❌';
-        titulo.textContent = 'Não consegui salvar!';
-        sub.textContent = 'Verifique sua internet e tente de novo.';
-        sub.style.color = 'rgba(255,120,120,0.95)';
-    }
-}
 
 // ── ERRO DE LOGIN ─────────────────────────────────────────────
 function loginErro(msg) {
@@ -417,325 +404,148 @@ function loginErro(msg) {
     el.style.display = 'block';
 }
 
-// ── OFERTA ───────────────────────────────────────────────────
-function clienteTemOferta() {
-    if (!user || user.oferta_ativa === false) return false;
-    if (!user.created_at) return false;
-    return (Date.now() - new Date(user.created_at).getTime()) / (1000*60*60*24) <= 15;
+// ── PREENCHER COMPROVANTE ─────────────────────────────────────
+// Retorna: null (não registrado) | { meu: true } (eu mesmo) | { meu: false, nome: "..." } (outro cliente)
+async function pixJaRegistrado() {
+    if (!pixDados || !user) return null;
+    const { data, error } = await sb
+        .from('pagamentos_pix')
+        .select('phone')
+        .eq('valor', pixDados.valorNum)
+        .eq('data_pix', pixDados.data)
+        .eq('hora_pix', pixDados.hora)
+        .maybeSingle();
+    if (error) { console.error('Erro ao checar Pix:', error); return null; }
+    if (!data) return null;
+    if (data.phone === user.phone) return { meu: true };
+
+    // Busca o nome do outro cliente
+    const { data: outro } = await sb
+        .from('clientes')
+        .select('name')
+        .eq('phone', data.phone)
+        .maybeSingle();
+    return { meu: false, nome: outro?.name || 'outro cliente' };
 }
 
-// ── VERIFICAR PEDIDO RECENTE ──────────────────────────────────
-async function verificarPedidoRecente() {
-    try {
-        const dez = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        const { data } = await sb.from('pedidos')
-            .select('id, created_at')
-            .eq('customer_phone', user.phone)
-            .gte('created_at', dez)
-            .order('created_at', { ascending: false })
-            .limit(1);
-        return (data && data.length > 0) ? data[0] : null;
-    } catch(e) { return null; }
-}
-
-// ── RESOLVER DUPLICATA ────────────────────────────────────────
-let _pedidoAnteriorId  = null;
-let _resolverDuplicata = null;
-
-function resolverDuplicata(decisao) {
-    document.getElementById('popupDuplicata').classList.remove('ativo');
-    if (_resolverDuplicata) _resolverDuplicata(decisao);
-}
-
-async function cancelarPedidoAnterior(pedidoId) {
-    try {
-        const { data: pedido } = await sb.from('pedidos')
-            .select('id, total, items, credito_usado')
-            .eq('id', pedidoId)
-            .maybeSingle();
-        if (!pedido) return;
-
-        const creditoMatch = (pedido.items || '').match(/💳 CREDITO:([\d.,]+)/);
-        const creditoUsado = creditoMatch ? Number(creditoMatch[1].replace(',','.')) : (Number(pedido.credito_usado) || 0);
-        const { data: c } = await sb.from('clientes').select('debt').eq('phone', user.phone).single();
-        if (c) {
-            const novoDebt = (c.debt || 0) - Number(pedido.total) - creditoUsado;
-            await sb.from('clientes').update({ debt: novoDebt }).eq('phone', user.phone);
-            user.debt = novoDebt;
-        }
-
-        // Restaura cupom
-        const linhasCupom = (pedido.items || '').split('\n').filter(l => l.includes('CUPOM:'));
-        if (linhasCupom.length > 0) {
-            const parts = linhasCupom[0].split(':');
-            const pct = Number(parts[1]) || 0;
-            if (pct > 0) {
-                await sb.from('premios').insert({
-                    customer_phone: user.phone,
-                    customer_name: user.name,
-                    descricao: `🏷️ ${pct}% OFF — ${pct}% de desconto`,
-                    jogo: 'cupom_estornado',
-                    tickets_usados: 0, diamantes_usados: 0, cancelado: false
-                });
-            }
-        }
-
-        await sb.from('pedidos').delete().eq('id', pedidoId);
-        await sb.from('notificacoes').insert({
-            customer_phone: user.phone,
-            tipo: 'reembolso',
-            valor: Number(pedido.total) + creditoUsado,
-            descricao: 'Pedido cancelado pelo cliente'
-        });
-    } catch(e) { console.warn('Erro ao cancelar anterior:', e); }
-}
-
-// ── LER PRODUTOS DA URL ───────────────────────────────────────
-// Mesma lógica do processarURLParams() do clientes.html
-// Suporta: ?fritos=10+Frango=10+Catupiry=10+charque?crus=5+Queijo
-// ou:      ?fritos=10+Frango=10+Catupiry=10+charque=10+enroladinho=10+queijo
-function lerItensURL() {
-    function norm(n) {
-        return n.toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .replace(/\./g, '').replace(/\s+/g, ' ').trim();
-    }
-
-    let itens = [];
-    const fullHref = decodeURIComponent(window.location.href).replace(/\+/g, ' ');
-    const segmentos = fullHref.split('?').slice(1);
-    let encontrouFormato = false;
-
-    segmentos.forEach(seg => {
-        const categoriaMatch = seg.match(/^(fritos|crus)=/i);
-        if (!categoriaMatch) return;
-        encontrouFormato = true;
-        const categoria = categoriaMatch[1].toLowerCase(); // 'fritos' ou 'crus'
-        const re4 = /(?:[^=]*=)(\d+)\s+([^=]+)/g;
-        let m4;
-        while ((m4 = re4.exec(seg)) !== null) {
-            itens.push({ qty: parseInt(m4[1]), nome: m4[2].trim(), categoria });
-        }
+async function marcarPixRegistrado() {
+    if (!pixDados || !user) return;
+    const { error } = await sb.from('pagamentos_pix').insert({
+        phone:    user.phone,
+        valor:    pixDados.valorNum,
+        data_pix: pixDados.data,
+        hora_pix: pixDados.hora,
+        destino:  pixDados.destino,
+        adm:      false
     });
-
-    if (!encontrouFormato || itens.length === 0) return null;
-
-    // Monta pedidoTexto e calcula total
-    const temOferta = clienteTemOferta();
-    let pedidoTextoFritos = '';
-    let pedidoTextoCrus   = '';
-    let total = 0;
-
-    // Preços de fallback (usados quando products ainda não carregou do banco)
-    const FALLBACK_PRECOS = {
-        'fritos': {
-            'cox. frango':    2.00,
-            'cox. catupiry':  2.00,
-            'cox. charque':   2.70,
-            'r. queijo':      2.00,
-            'enroladinho':    2.00,
-        },
-        'crus': {
-            'cox. frango':    2.00,
-            'cox. catupiry':  2.00,
-            'cox. charque':   2.50,
-            'r. queijo':      2.00,
-            'salsicha':       2.00,
-        }
-    };
-
-    itens.forEach(({ qty, nome, categoria }) => {
-        if (qty <= 0) return;
-        const n = norm(nome);
-
-        // Prioriza candidatos da categoria informada (igual ao clientes.html)
-        let candidatos = products;
-        if (categoria) {
-            const porCategoria = products.filter(p => (p.categoria || '') === categoria);
-            if (porCategoria.length > 0) candidatos = porCategoria;
-        }
-
-        const prod =
-            candidatos.find(p => norm(p.name) === n) ||
-            candidatos.find(p => norm(p.name).includes(n)) ||
-            candidatos.find(p => n.includes(norm(p.name))) ||
-            products.find(p => norm(p.name) === n) ||
-            products.find(p => norm(p.name).includes(n)) ||
-            products.find(p => n.includes(norm(p.name)));
-
-        let preco, nomeFinal, tipoEmoji;
-
-        if (prod) {
-            preco     = (temOferta && prod.pricePromo) ? parseFloat(prod.pricePromo) : parseFloat(prod.price) || 0;
-            nomeFinal = prod.name;
-            tipoEmoji = prod.tipo === 'quente' ? '🍗' : prod.tipo === 'fria' ? '🥐' : '✅';
-        } else {
-            // Fallback: busca preço hardcoded pelo nome normalizado
-            const tabelaCat = FALLBACK_PRECOS[categoria] || {};
-            const tabelaGeral = { ...FALLBACK_PRECOS['fritos'], ...FALLBACK_PRECOS['crus'] };
-            const tabelaBusca = Object.keys(tabelaCat).length ? tabelaCat : tabelaGeral;
-
-            const chave = Object.keys(tabelaBusca).find(k => k === n || k.includes(n) || n.includes(k));
-            if (!chave) { console.warn('[URL] Produto não encontrado (nem no fallback):', nome); return; }
-
-            preco     = tabelaBusca[chave];
-            nomeFinal = nome; // usa o nome como veio da URL
-            tipoEmoji = '🍗';
-            console.info('[URL] Usando preço fallback para:', nome, '→ R$', preco);
-        }
-
-        total += preco * qty;
-
-        const linha = `${tipoEmoji} ${qty}x ${nomeFinal}`;
-        if (categoria === 'crus') {
-            pedidoTextoCrus += linha + '\n';
-        } else {
-            pedidoTextoFritos += linha + '\n';
-        }
-    });
-
-    if (total === 0) return null;
-
-    let pedidoTexto = '';
-    if (pedidoTextoFritos) pedidoTexto += '———————🔥fritos🔥———————\n' + pedidoTextoFritos;
-    if (pedidoTextoCrus)   pedidoTexto += '———————❄️ crus ❄️———————\n' + pedidoTextoCrus;
-
-    return { pedidoTexto, total };
+    if (error) console.error('Erro ao salvar Pix:', error);
 }
 
-// ── FAZER PEDIDO ──────────────────────────────────────────────
-async function fazerPedido() {
-    const params = window.location.search; // ex: "?=salvos" | "?fritos=10+Frango=10..."
+async function preencherComprovante() {
+    if (!pixDados || !user) return;
 
-    mostrar('telaConfirm');
-    roboEstado('salvando');
+    // Avatar (inicial do nome)
+    document.getElementById('clienteAvatar').textContent = user.name.charAt(0).toUpperCase();
+    document.getElementById('clienteNome').textContent   = user.name;
 
-    // Carregar dados frescos do cliente
-    const { data: client } = await sb.from('clientes')
-        .select('*').eq('phone', user.phone).maybeSingle();
-    if (!client) { roboEstado('nao'); return; }
-    user = { ...user, debt: client.debt, saved_order: client.saved_order, saved_order_total: client.saved_order_total };
+    const debtFmt = user.debt > 0
+        ? `R$ ${user.debt.toFixed(2).replace('.',',')}`
+        : user.debt < 0
+            ? `- R$ ${Math.abs(user.debt).toFixed(2).replace('.',',')} (crédito)`
+            : 'R$ 0,00';
+    document.getElementById('clienteDebt').textContent = debtFmt;
 
-    let pedidoTexto, total;
+    // Dados PIX
+    document.getElementById('compValor').textContent    = pixDados.valor;
+    document.getElementById('compDataHora').textContent = `${pixDados.data} às ${pixDados.hora}`;
+    document.getElementById('compDestino').textContent  = pixDados.destino;
 
-    const isSalvos = params.includes('=salvos');
-
-    if (isSalvos) {
-        // ── Modo ?=salvos → usa pedido salvo do banco ──
-        const savedOrder = (client.saved_order || '').trim();
-        if (!savedOrder) {
-            // Sem pedido salvo → WhatsApp imediatamente
-            window.location.href = `https://api.whatsapp.com/send?phone=55${ADMIN_NUM}`;
-            return;
-        }
-
-        // Calcular total com preços atuais
-        const temOferta = clienteTemOferta();
-        total = 0;
-        const linhas = savedOrder.split('\n').filter(Boolean);
-        for (const linha of linhas) {
-            const match = linha.match(/(\d+)x\s+(.+)/);
-            if (match) {
-                const qty  = parseInt(match[1]);
-                const nome = match[2].trim();
-                const prod = products.find(p => p.name.trim() === nome);
-                if (prod) {
-                    const preco = (temOferta && prod.pricePromo) ? parseFloat(prod.pricePromo) : parseFloat(prod.price) || 0;
-                    total += preco * qty;
-                }
-            }
-        }
-        if (total === 0) total = Number(client.saved_order_total) || 0;
-        if (total === 0) {
-            // Pedido salvo sem valor reconhecido → WhatsApp imediatamente
-            window.location.href = `https://api.whatsapp.com/send?phone=55${ADMIN_NUM}`;
-            return;
-        }
-        pedidoTexto = savedOrder;
-
+    // Status
+    const status = document.getElementById('compStatus');
+    const reg = await pixJaRegistrado();
+    if (reg) {
+        status.className   = 'comp-status duplicado';
+        status.textContent = reg.meu
+            ? '❌ Pagamento já registrado ❌'
+            : `❌ Pagamento já registrado por ${reg.nome} ❌`;
     } else {
-        // ── Modo ?fritos=10+... → usa produtos da URL ──
-        const urlPedido = lerItensURL();
-        if (!urlPedido) {
-            // URL com params mas nenhum produto reconhecido → WhatsApp imediatamente
-            window.location.href = `https://api.whatsapp.com/send?phone=55${ADMIN_NUM}`;
-            return;
-        }
-        pedidoTexto = urlPedido.pedidoTexto;
-        total       = urlPedido.total;
+        status.className   = 'comp-status';
+        status.textContent = '';
     }
+}
 
-    // Crédito
-    const useCredit    = (user.debt < 0);
-    const creditoUsado = useCredit ? Math.min(Math.abs(user.debt), total) : 0;
-    const finalTotal   = Math.max(0, total - creditoUsado);
+// ── ANIMAÇÃO DA DÍVIDA ────────────────────────────────────────
+// Velocidade: R$4/s → 400 centavos/s → 4 centavos a cada 10ms
+function animarDivida(deStart, deEnd) {
+    const el = document.getElementById('clienteDebt');
+    let centAtual = Math.round(deStart * 100);
+    const centFinal = Math.round(deEnd * 100);
+    if (centAtual <= centFinal) return; // nada a animar
 
-    if (creditoUsado > 0) pedidoTexto += `\n💳 CREDITO:${creditoUsado.toFixed(2)}`;
-
-    // ── Verificar pedido anterior ──
-    const pedidoRecente = await verificarPedidoRecente();
-    if (pedidoRecente) {
-        const minAtras = Math.max(1, Math.round((Date.now() - new Date(pedidoRecente.created_at).getTime()) / 60000));
-        _pedidoAnteriorId = pedidoRecente.id;
-        document.getElementById('tempoAnterior').textContent = minAtras + ' min atrás';
-        document.getElementById('popupDuplicata').classList.add('ativo');
-
-        const decisao = await new Promise(res => { _resolverDuplicata = res; });
-
-        if (decisao === 'cancelar') {
-            await cancelarPedidoAnterior(_pedidoAnteriorId);
-            // Recarregar debt após cancelamento
-            const { data: cAtual } = await sb.from('clientes').select('debt').eq('phone', user.phone).maybeSingle();
-            if (cAtual) user.debt = cAtual.debt;
+    const intervalo = setInterval(() => {
+        centAtual -= 4;
+        if (centAtual <= centFinal) {
+            centAtual = centFinal;
+            clearInterval(intervalo);
         }
-    }
+        const val = centAtual / 100;
+        el.textContent = val > 0
+            ? `R$ ${val.toFixed(2).replace('.',',')}`
+            : val < 0
+                ? `- R$ ${Math.abs(val).toFixed(2).replace('.',',')} (crédito)`
+                : 'R$ 0,00';
+    }, 10);
+}
 
-    // ── Inserir pedido ──
+// ── CONFIRMAR PAGAMENTO ───────────────────────────────────────
+async function confirmarPagamento() {
+    if (!pixDados || !user) return;
+    const reg = await pixJaRegistrado();
+    if (reg) return;
+
+    const status = document.getElementById('compStatus');
+    status.className   = 'comp-status';
+    status.textContent = '';
+
     try {
-        const { data: pedidoInserido, error: errPedido } = await sb.from('pedidos').insert({
-            customer_name:   user.name,
-            customer_phone:  user.phone,
-            total:           finalTotal,
-            payment_method:  'PAGA NA ENTREGA',
-            items:           pedidoTexto,
-            credito_usado:   creditoUsado
-        }).select('id').single();
-        if (errPedido) throw errPedido;
+        // Busca debt atual (fresco do banco)
+        const { data: clienteAtual, error: errBusca } = await sb
+            .from('clientes')
+            .select('debt')
+            .eq('phone', user.phone)
+            .maybeSingle();
 
-        // ── Confirmar no banco (3 tentativas) ──
-        let confirmado = false;
-        for (let t = 1; t <= 3; t++) {
-            await new Promise(r => setTimeout(r, t * 800));
-            const { data: chk } = await sb.from('pedidos').select('id').eq('id', pedidoInserido.id).maybeSingle();
-            if (chk?.id) { confirmado = true; break; }
-        }
-        if (!confirmado) throw new Error('Pedido não confirmado no banco após 3 tentativas');
+        if (errBusca || !clienteAtual) throw new Error('Cliente não encontrado');
 
-        // ── Atualizar dívida ──
-        const newDebt = user.debt + finalTotal + creditoUsado;
-        await sb.from('clientes').update({ debt: newDebt }).eq('phone', user.phone);
-        user.debt = newDebt;
+        const debtAtual  = Number(clienteAtual.debt) || 0;
+        const novoDebt   = debtAtual - pixDados.valorNum;
 
-        // ── Montar mensagem WhatsApp ──
-        const pedidoTextoMsg = pedidoTexto.split('\n')
-            .filter(l => !l.startsWith('💳 CREDITO:'))
-            .join('\n');
+        // Atualiza debt
+        const { error: errUpdate } = await sb
+            .from('clientes')
+            .update({ debt: novoDebt })
+            .eq('phone', user.phone);
 
-        let finalMsg = msgTemplate
-            .replace('{nome}',     user.name.split(' ')[0].toUpperCase())
-            .replace('{pedido}',   pedidoTextoMsg)
-            .replace('{total}',    finalTotal.toFixed(2).replace('.',','))
-            .replace('{pagamento}','Pagar na Entrega');
+        if (errUpdate) throw errUpdate;
 
-        roboEstado('sim');
+        // Atualiza cache local
+        user.debt = novoDebt;
+        localStorage.setItem('salgados_user', JSON.stringify(user));
 
-        setTimeout(() => {
-            window.location.href = `https://api.whatsapp.com/send?phone=55${ADMIN_NUM}&text=${encodeURIComponent(finalMsg)}`;
-        }, 1800);
+        // Salva o PIX no Supabase
+        await marcarPixRegistrado();
+
+        // Status de sucesso
+        status.className   = 'comp-status sucesso';
+        status.textContent = '✅ Pix registrado com sucesso ✅';
+
+        // Animação da dívida diminuindo (R$4/s)
+        animarDivida(debtAtual, novoDebt);
 
     } catch(err) {
-        console.error('Erro ao salvar pedido:', err);
-        roboEstado('nao');
+        console.error('Erro ao registrar pagamento:', err);
+        status.className   = 'comp-status duplicado';
+        status.textContent = '❌ Erro ao registrar. Tente recarregar.';
     }
 }
 
@@ -755,7 +565,7 @@ async function auth() {
         if (partial.startsWith('55')) partial = partial.substring(2);
         if (partial.length < 8) {
             loginErro('Digite o número completo (mínimo 8 dígitos)');
-            btn.disabled = false; btn.textContent = '🚀 Entrar e Pedir';
+            btn.disabled = false; btn.textContent = '🚀 Entrar e Confirmar';
             return;
         }
         partial = partial.slice(-8);
@@ -771,14 +581,14 @@ async function auth() {
             const nb = document.getElementById('nameBox');
             if (nb.style.display === 'none' || nb.style.display === '') {
                 nb.style.display = 'block';
-                btn.disabled = false; btn.textContent = '🚀 Entrar e Pedir';
+                btn.disabled = false; btn.textContent = '🚀 Entrar e Confirmar';
                 document.getElementById('userName').focus();
                 return;
             }
             const name = document.getElementById('userName').value.trim();
             if (!name) {
                 loginErro('Digite seu nome');
-                btn.disabled = false; btn.textContent = '🚀 Entrar e Pedir';
+                btn.disabled = false; btn.textContent = '🚀 Entrar e Confirmar';
                 return;
             }
             const { data: newClient, error } = await sb.from('clientes')
@@ -794,53 +604,26 @@ async function auth() {
         localStorage.setItem('salgados_phone', phone);
         localStorage.setItem('salgados_user',  JSON.stringify(user));
 
-        btn.disabled = false; btn.textContent = '🚀 Entrar e Pedir';
-        await iniciarPedido();
+        // Preenche, exibe comprovante e registra automaticamente
+        preencherComprovante();
+        mostrar('telaComprovante');
+        if (!pixJaRegistrado()) confirmarPagamento();
 
     } catch(e) {
         console.error('Auth error:', e);
         loginErro('Erro de conexão. Tente novamente.');
-        btn.disabled = false; btn.textContent = '🚀 Entrar e Pedir';
+        btn.disabled = false; btn.textContent = '🚀 Entrar e Confirmar';
     }
-}
-
-// ── INICIAR PEDIDO ────────────────────────────────────────────
-async function iniciarPedido() {
-    // Carregar products e msgTemplate em paralelo
-    try {
-        const [cfgRes, prodRes] = await Promise.all([
-            sb.from('configs').select('key, value').in('key', ['msg_template']),
-            sb.from('cardapio').select('*').eq('available', true)
-        ]);
-        if (cfgRes.data) {
-            const tpl = cfgRes.data.find(c => c.key === 'msg_template');
-            if (tpl) msgTemplate = tpl.value;
-        }
-        if (prodRes.data) products = prodRes.data.map(p => ({
-            id: p.id,
-            name: p.name,
-            price: Number(p.price),
-            pricePromo: p.price_promo ? Number(p.price_promo) : null,
-            img: p.image_url || '',
-            categoria: (p.categoria || '').toLowerCase(),
-            tipo: (p.tipo || '').toLowerCase()
-        }));
-    } catch(e) {
-        console.warn('Erro ao carregar produtos/configs:', e);
-    }
-
-    await fazerPedido();
 }
 
 // ── INIT ──────────────────────────────────────────────────────
 window.onload = async () => {
-    // ── Sem parâmetros na URL → fica aguardando, não faz nada ──
-    if (!window.location.search) {
-        mostrar('telaSemPedido');
+    pixDados = parsearURLPix();
+    if (!pixDados) {
+        mostrar('telaSemLink');
         return;
     }
 
-    // Timeout de segurança: 10s sem resposta → tela de login
     const guard = setTimeout(() => mostrar('telaLogin'), 10000);
 
     const savedPhone = localStorage.getItem('salgados_phone');
@@ -855,16 +638,19 @@ window.onload = async () => {
                 };
                 localStorage.setItem('salgados_user', JSON.stringify(user));
                 clearTimeout(guard);
-                await iniciarPedido();
+                preencherComprovante();
+                mostrar('telaComprovante');
+                if (!pixJaRegistrado()) confirmarPagamento();
                 return;
             }
         } catch(e) {
-            // Sem internet — tentar cache local
             const cached = localStorage.getItem('salgados_user');
             if (cached) {
                 user = JSON.parse(cached);
                 clearTimeout(guard);
-                await iniciarPedido();
+                preencherComprovante();
+                mostrar('telaComprovante');
+                if (!pixJaRegistrado()) confirmarPagamento();
                 return;
             }
         }
@@ -873,18 +659,6 @@ window.onload = async () => {
     clearTimeout(guard);
     mostrar('telaLogin');
 };
-
-// Esconde robô ao voltar do WhatsApp
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-        const tc = document.getElementById('telaConfirm');
-        if (!tc.classList.contains('oculta')) {
-            // Pedido já foi — volta para o estado neutro
-            tc.classList.add('oculta');
-            tc.classList.remove('ativo');
-        }
-    }
-});
 </script>
 </body>
 </html>
