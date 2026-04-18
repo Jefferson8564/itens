@@ -518,7 +518,23 @@ function lerItensURL() {
         }
     });
 
-    if (!encontrouFormato || itens.length === 0) return null;
+    // ── Formato simples: ?=5+Cox.+Frango=5+Cox.+Catupiry ──
+    if (!encontrouFormato || itens.length === 0) {
+        itens = [];
+        const simpleHref = decodeURIComponent(window.location.href).replace(/\+/g, ' ');
+        // Pega tudo depois do primeiro '?'
+        const afterQ = simpleHref.split('?')[1] || '';
+        // Divide por '=' e ignora o primeiro (vazio antes do primeiro '=')
+        const partes = afterQ.split('=').filter(p => p.trim() !== '');
+        partes.forEach(parte => {
+            // Cada parte: "5 Cox. Frango" → qty=5, nome="Cox. Frango"
+            const m = parte.trim().match(/^(\d+)\s+(.+)$/);
+            if (m) {
+                itens.push({ qty: parseInt(m[1]), nome: m[2].trim(), categoria: 'fritos' });
+            }
+        });
+        if (itens.length === 0) return null;
+    }
 
     // Monta pedidoTexto e calcula total
     const temOferta = clienteTemOferta();
@@ -544,11 +560,26 @@ function lerItensURL() {
         }
     };
 
+    // Apelidos → nome exato no banco (após norm())
+    const ALIASES = {
+        'queijo':          'r queijo',
+        'r queijo':        'r queijo',
+        'enroladinho':     'enroladinho',
+        'cox frango':      'cox frango',
+        'frango':          'cox frango',
+        'cox catupiry':    'cox catupiry',
+        'catupiry':        'cox catupiry',
+        'cox charque':     'cox charque',
+        'charque':         'cox charque',
+        'salsicha':        'salsicha',
+    };
+
     itens.forEach(({ qty, nome, categoria }) => {
         if (qty <= 0) return;
         const n = norm(nome);
+        const nAlias = ALIASES[n] || n;
 
-        // Prioriza candidatos da categoria informada (igual ao clientes.html)
+        // Prioriza candidatos da categoria informada
         let candidatos = products;
         if (categoria) {
             const porCategoria = products.filter(p => (p.categoria || '') === categoria);
@@ -556,12 +587,15 @@ function lerItensURL() {
         }
 
         const prod =
+            candidatos.find(p => norm(p.name) === nAlias) ||
             candidatos.find(p => norm(p.name) === n) ||
+            candidatos.find(p => norm(p.name).includes(nAlias)) ||
             candidatos.find(p => norm(p.name).includes(n)) ||
-            candidatos.find(p => n.includes(norm(p.name))) ||
+            candidatos.find(p => nAlias.includes(norm(p.name))) ||
+            products.find(p => norm(p.name) === nAlias) ||
             products.find(p => norm(p.name) === n) ||
-            products.find(p => norm(p.name).includes(n)) ||
-            products.find(p => n.includes(norm(p.name)));
+            products.find(p => norm(p.name).includes(nAlias)) ||
+            products.find(p => norm(p.name).includes(n));
 
         let preco, nomeFinal, tipoEmoji;
 
@@ -575,7 +609,11 @@ function lerItensURL() {
             const tabelaGeral = { ...FALLBACK_PRECOS['fritos'], ...FALLBACK_PRECOS['crus'] };
             const tabelaBusca = Object.keys(tabelaCat).length ? tabelaCat : tabelaGeral;
 
-            const chave = Object.keys(tabelaBusca).find(k => k === n || k.includes(n) || n.includes(k));
+            const chave = Object.keys(tabelaBusca).find(k =>
+                norm(k) === nAlias || norm(k) === n ||
+                norm(k).includes(nAlias) || norm(k).includes(n) ||
+                nAlias.includes(norm(k)) || n.includes(norm(k))
+            );
             if (!chave) { console.warn('[URL] Produto não encontrado (nem no fallback):', nome); return; }
 
             preco     = tabelaBusca[chave];
