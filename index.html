@@ -328,69 +328,6 @@
     </div>
 </div>
 
-<!-- ── REVISÃO DO PEDIDO (antes de confirmar) ── -->
-<div id="popupRevisao" style="
-    position:fixed;inset:0;z-index:600;
-    background:rgba(0,0,0,0.82);backdrop-filter:blur(12px);
-    display:none;align-items:flex-end;justify-content:center;
-    padding:0;
-">
-  <div style="
-    background:#151c2e;border:1px solid rgba(255,255,255,0.12);
-    border-radius:28px 28px 0 0;padding:28px 22px 36px;
-    max-width:440px;width:100%;
-    animation:slideUp 0.35s cubic-bezier(0.34,1.2,0.64,1) both;
-  ">
-    <div style="text-align:center;margin-bottom:18px;">
-      <div style="font-size:36px;margin-bottom:6px;">🧾</div>
-      <div style="font-size:20px;font-weight:900;color:white;">Confira seu pedido</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-top:4px;font-weight:500;">Verifique antes de finalizar</div>
-    </div>
-
-    <!-- Itens do pedido -->
-    <div id="revisaoItens" style="
-      background:rgba(255,255,255,0.05);border-radius:16px;
-      padding:14px 16px;margin-bottom:14px;
-      font-size:14px;color:rgba(255,255,255,0.85);
-      line-height:1.9;font-weight:600;
-      max-height:200px;overflow-y:auto;
-      white-space:pre-line;
-    "></div>
-
-    <!-- Total + crédito -->
-    <div id="revisaoTotal" style="
-      display:flex;justify-content:space-between;align-items:center;
-      background:rgba(199,91,36,0.15);border:1px solid rgba(199,91,36,0.3);
-      border-radius:14px;padding:12px 16px;margin-bottom:18px;
-    ">
-      <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.7);">Total a pagar</span>
-      <span id="revisaoTotalValor" style="font-size:22px;font-weight:900;color:#ffa040;"></span>
-    </div>
-
-    <div id="revisaoCreditoBox" style="
-      display:none;
-      background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.25);
-      border-radius:12px;padding:10px 14px;margin-bottom:14px;
-      font-size:13px;color:#25d366;font-weight:700;text-align:center;
-    "></div>
-
-    <div style="display:flex;gap:10px;">
-      <button id="btnRevisaoCancelar" style="
-        flex:1;padding:15px;
-        background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
-        border-radius:14px;color:rgba(255,255,255,0.7);font-size:14px;font-weight:800;cursor:pointer;
-      ">✏️ Corrigir</button>
-      <button id="btnRevisaoConfirmar" style="
-        flex:2;padding:15px;
-        background:linear-gradient(135deg,#1aad52,#25d366);
-        border:none;border-radius:14px;color:white;font-size:15px;font-weight:900;cursor:pointer;
-        box-shadow:0 6px 20px rgba(37,211,102,0.35);
-      ">✅ Confirmar pedido</button>
-    </div>
-  </div>
-</div>
-@keyframes slideUp { from{transform:translateY(100%);opacity:0;} to{transform:translateY(0);opacity:1;} }
-
 <!-- ── CONFIRMAÇÃO (ROBÔ) ── -->
 <div id="telaConfirm" class="tela oculta">
     <div id="roboInner" class="state-salvando">
@@ -812,15 +749,7 @@ async function fazerPedido() {
         }
     }
 
-    // ── 3. EXIBIR TELA DE REVISÃO antes de salvar ──
-    const confirmado = await exibirRevisao(pedidoTexto, finalTotal, creditoUsado);
-    if (!confirmado) {
-        // Usuário clicou em "Corrigir" → volta pro WhatsApp sem fazer nada
-        history.back();
-        return;
-    }
-
-    // ── 4. Agora sim: salvar pedido ──
+    // ── 3. Salvar pedido ──
     mostrar('telaConfirm');
     roboEstado('salvando');
 
@@ -890,41 +819,6 @@ async function fazerPedido() {
         // Mostrar motivo do erro no subtítulo
         document.getElementById('roboSub').textContent = err.message || 'Verifique sua internet e tente de novo.';
     }
-}
-
-// ── TELA DE REVISÃO DO PEDIDO ─────────────────────────────────
-function exibirRevisao(pedidoTexto, finalTotal, creditoUsado) {
-    return new Promise(resolve => {
-        // Preencher itens (remove linha de crédito para exibir limpo)
-        const itensLimpos = pedidoTexto.split('\n')
-            .filter(l => l.trim() && !l.startsWith('💳 CREDITO:'))
-            .join('\n');
-        document.getElementById('revisaoItens').textContent = itensLimpos;
-        document.getElementById('revisaoTotalValor').textContent = 'R$ ' + finalTotal.toFixed(2).replace('.', ',');
-
-        const creditoBox = document.getElementById('revisaoCreditoBox');
-        if (creditoUsado > 0) {
-            creditoBox.style.display = 'block';
-            creditoBox.textContent = `💳 Crédito aplicado: - R$ ${creditoUsado.toFixed(2).replace('.', ',')}`;
-        } else {
-            creditoBox.style.display = 'none';
-        }
-
-        const popup = document.getElementById('popupRevisao');
-        popup.style.display = 'flex';
-
-        // Botão cancelar
-        document.getElementById('btnRevisaoCancelar').onclick = () => {
-            popup.style.display = 'none';
-            resolve(false);
-        };
-
-        // Botão confirmar
-        document.getElementById('btnRevisaoConfirmar').onclick = () => {
-            popup.style.display = 'none';
-            resolve(true);
-        };
-    });
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
