@@ -294,6 +294,16 @@
     <div class="sem-sub">Abra o link de pedido enviado pelo WhatsApp para continuar.</div>
 </div>
 
+<!-- ── ERRO DE CONEXÃO ── -->
+<div id="telaErroConexao" class="tela oculta">
+    <div class="sem-emoji">📶</div>
+    <div class="sem-titulo" style="color:white;">Sem conexão</div>
+    <div class="sem-sub">Verifique sua internet e tente novamente.</div>
+    <button class="btn-voltar" onclick="location.reload()" style="margin-top:20px;">
+        🔄 Atualizar página
+    </button>
+</div>
+
 <!-- ── POPUP: PEDIDO ANTERIOR ── -->
 <div id="popupDuplicata">
     <div class="dup-card">
@@ -317,6 +327,69 @@
         </div>
     </div>
 </div>
+
+<!-- ── REVISÃO DO PEDIDO (antes de confirmar) ── -->
+<div id="popupRevisao" style="
+    position:fixed;inset:0;z-index:600;
+    background:rgba(0,0,0,0.82);backdrop-filter:blur(12px);
+    display:none;align-items:flex-end;justify-content:center;
+    padding:0;
+">
+  <div style="
+    background:#151c2e;border:1px solid rgba(255,255,255,0.12);
+    border-radius:28px 28px 0 0;padding:28px 22px 36px;
+    max-width:440px;width:100%;
+    animation:slideUp 0.35s cubic-bezier(0.34,1.2,0.64,1) both;
+  ">
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-size:36px;margin-bottom:6px;">🧾</div>
+      <div style="font-size:20px;font-weight:900;color:white;">Confira seu pedido</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-top:4px;font-weight:500;">Verifique antes de finalizar</div>
+    </div>
+
+    <!-- Itens do pedido -->
+    <div id="revisaoItens" style="
+      background:rgba(255,255,255,0.05);border-radius:16px;
+      padding:14px 16px;margin-bottom:14px;
+      font-size:14px;color:rgba(255,255,255,0.85);
+      line-height:1.9;font-weight:600;
+      max-height:200px;overflow-y:auto;
+      white-space:pre-line;
+    "></div>
+
+    <!-- Total + crédito -->
+    <div id="revisaoTotal" style="
+      display:flex;justify-content:space-between;align-items:center;
+      background:rgba(199,91,36,0.15);border:1px solid rgba(199,91,36,0.3);
+      border-radius:14px;padding:12px 16px;margin-bottom:18px;
+    ">
+      <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.7);">Total a pagar</span>
+      <span id="revisaoTotalValor" style="font-size:22px;font-weight:900;color:#ffa040;"></span>
+    </div>
+
+    <div id="revisaoCreditoBox" style="
+      display:none;
+      background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.25);
+      border-radius:12px;padding:10px 14px;margin-bottom:14px;
+      font-size:13px;color:#25d366;font-weight:700;text-align:center;
+    "></div>
+
+    <div style="display:flex;gap:10px;">
+      <button id="btnRevisaoCancelar" style="
+        flex:1;padding:15px;
+        background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+        border-radius:14px;color:rgba(255,255,255,0.7);font-size:14px;font-weight:800;cursor:pointer;
+      ">✏️ Corrigir</button>
+      <button id="btnRevisaoConfirmar" style="
+        flex:2;padding:15px;
+        background:linear-gradient(135deg,#1aad52,#25d366);
+        border:none;border-radius:14px;color:white;font-size:15px;font-weight:900;cursor:pointer;
+        box-shadow:0 6px 20px rgba(37,211,102,0.35);
+      ">✅ Confirmar pedido</button>
+    </div>
+  </div>
+</div>
+@keyframes slideUp { from{transform:translateY(100%);opacity:0;} to{transform:translateY(0);opacity:1;} }
 
 <!-- ── CONFIRMAÇÃO (ROBÔ) ── -->
 <div id="telaConfirm" class="tela oculta">
@@ -360,7 +433,7 @@ function horasBRT(d) {
 
 // ── TELAS ────────────────────────────────────────────────────
 function mostrar(id) {
-    ['telaLoading','telaLogin','telaConfirm','telaSemPedido'].forEach(t => {
+    ['telaLoading','telaLogin','telaConfirm','telaSemPedido','telaErroConexao'].forEach(t => {
         document.getElementById(t).classList.add('oculta');
     });
     const el = document.getElementById(id);
@@ -643,31 +716,45 @@ function lerItensURL() {
 
 // ── FAZER PEDIDO ──────────────────────────────────────────────
 async function fazerPedido() {
-    const params = window.location.search; // ex: "?=salvos" | "?fritos=10+Frango=10..."
+    const params = window.location.search;
 
     mostrar('telaConfirm');
     roboEstado('salvando');
 
-    // Carregar dados frescos do cliente
-    const { data: client } = await sb.from('clientes')
-        .select('*').eq('phone', user.phone).maybeSingle();
+    // ── 1. Carregar dados frescos do cliente (com retry se internet ruim) ──
+    let client = null;
+    for (let tentativa = 1; tentativa <= 3; tentativa++) {
+        try {
+            const { data } = await sb.from('clientes')
+                .select('*').eq('phone', user.phone).maybeSingle();
+            client = data;
+            break;
+        } catch(e) {
+            if (tentativa === 3) {
+                // Fallback: usar cache local se tiver
+                const cached = localStorage.getItem('salgados_user');
+                if (cached) {
+                    client = JSON.parse(cached);
+                    console.warn('[fazerPedido] Usando cache local (sem internet)');
+                }
+            } else {
+                await new Promise(r => setTimeout(r, tentativa * 600));
+            }
+        }
+    }
+
     if (!client) { roboEstado('nao'); return; }
     user = { ...user, debt: client.debt, saved_order: client.saved_order, saved_order_total: client.saved_order_total };
 
     let pedidoTexto, total;
-
     const isSalvos = params.includes('=salvos');
 
     if (isSalvos) {
-        // ── Modo ?=salvos → usa pedido salvo do banco ──
         const savedOrder = (client.saved_order || '').trim();
         if (!savedOrder) {
-            // Sem pedido salvo → WhatsApp imediatamente
             window.location.href = `https://api.whatsapp.com/send?phone=55${ADMIN_NUM}`;
             return;
         }
-
-        // Calcular total com preços atuais
         const temOferta = clienteTemOferta();
         total = 0;
         const linhas = savedOrder.split('\n').filter(Boolean);
@@ -685,17 +772,14 @@ async function fazerPedido() {
         }
         if (total === 0) total = Number(client.saved_order_total) || 0;
         if (total === 0) {
-            // Pedido salvo sem valor reconhecido → WhatsApp imediatamente
             window.location.href = `https://api.whatsapp.com/send?phone=55${ADMIN_NUM}`;
             return;
         }
         pedidoTexto = savedOrder;
 
     } else {
-        // ── Modo ?fritos=10+... → usa produtos da URL ──
         const urlPedido = lerItensURL();
         if (!urlPedido) {
-            // URL com params mas nenhum produto reconhecido → WhatsApp imediatamente
             window.location.href = `https://api.whatsapp.com/send?phone=55${ADMIN_NUM}`;
             return;
         }
@@ -708,9 +792,10 @@ async function fazerPedido() {
     const creditoUsado = useCredit ? Math.min(Math.abs(user.debt), total) : 0;
     const finalTotal   = Math.max(0, total - creditoUsado);
 
-    if (creditoUsado > 0) pedidoTexto += `\n💳 CREDITO:${creditoUsado.toFixed(2)}`;
+    let pedidoTextoComCredito = pedidoTexto;
+    if (creditoUsado > 0) pedidoTextoComCredito += `\n💳 CREDITO:${creditoUsado.toFixed(2)}`;
 
-    // ── Verificar pedido anterior ──
+    // ── 2. Verificar pedido anterior ──
     const pedidoRecente = await verificarPedidoRecente();
     if (pedidoRecente) {
         const minAtras = Math.max(1, Math.round((Date.now() - new Date(pedidoRecente.created_at).getTime()) / 60000));
@@ -722,40 +807,68 @@ async function fazerPedido() {
 
         if (decisao === 'cancelar') {
             await cancelarPedidoAnterior(_pedidoAnteriorId);
-            // Recarregar debt após cancelamento
             const { data: cAtual } = await sb.from('clientes').select('debt').eq('phone', user.phone).maybeSingle();
             if (cAtual) user.debt = cAtual.debt;
         }
     }
 
-    // ── Inserir pedido ──
+    // ── 3. EXIBIR TELA DE REVISÃO antes de salvar ──
+    const confirmado = await exibirRevisao(pedidoTexto, finalTotal, creditoUsado);
+    if (!confirmado) {
+        // Usuário clicou em "Corrigir" → volta pro WhatsApp sem fazer nada
+        history.back();
+        return;
+    }
+
+    // ── 4. Agora sim: salvar pedido ──
+    mostrar('telaConfirm');
+    roboEstado('salvando');
+
     try {
+        // Verificar se há conexão antes de tentar salvar
+        let online = navigator.onLine;
+        if (!online) {
+            throw new Error('Sem conexão com a internet. Verifique sua rede e tente novamente.');
+        }
+
         const { data: pedidoInserido, error: errPedido } = await sb.from('pedidos').insert({
             customer_name:   user.name,
             customer_phone:  user.phone,
             total:           finalTotal,
             payment_method:  'PAGA NA ENTREGA',
-            items:           pedidoTexto,
+            items:           pedidoTextoComCredito,
             credito_usado:   creditoUsado
         }).select('id').single();
         if (errPedido) throw errPedido;
 
-        // ── Confirmar no banco (3 tentativas) ──
-        let confirmado = false;
-        for (let t = 1; t <= 3; t++) {
-            await new Promise(r => setTimeout(r, t * 800));
-            const { data: chk } = await sb.from('pedidos').select('id').eq('id', pedidoInserido.id).maybeSingle();
-            if (chk?.id) { confirmado = true; break; }
+        // ── Confirmar no banco (4 tentativas, espera maior) ──
+        let pedidoConfirmado = false;
+        for (let t = 1; t <= 4; t++) {
+            await new Promise(r => setTimeout(r, t * 900));
+            try {
+                const { data: chk } = await sb.from('pedidos').select('id').eq('id', pedidoInserido.id).maybeSingle();
+                if (chk?.id) { pedidoConfirmado = true; break; }
+            } catch(e) { /* continua tentando */ }
         }
-        if (!confirmado) throw new Error('Pedido não confirmado no banco após 3 tentativas');
+        if (!pedidoConfirmado) throw new Error('Pedido inserido mas não confirmado no banco. Verifique sua internet.');
 
-        // ── Atualizar dívida ──
+        // ── Atualizar dívida SOMENTE após confirmar o pedido ──
         const newDebt = user.debt + finalTotal + creditoUsado;
-        await sb.from('clientes').update({ debt: newDebt }).eq('phone', user.phone);
+        const { error: errDebt } = await sb.from('clientes').update({ debt: newDebt }).eq('phone', user.phone);
+        if (errDebt) {
+            // Pedido foi salvo mas dívida não atualizou — log para investigação
+            console.error('[CRÍTICO] Pedido salvo mas dívida NÃO atualizada. Pedido ID:', pedidoInserido.id, 'Erro:', errDebt);
+            // Tenta mais 2 vezes
+            for (let t = 1; t <= 2; t++) {
+                await new Promise(r => setTimeout(r, t * 1000));
+                const { error: e2 } = await sb.from('clientes').update({ debt: newDebt }).eq('phone', user.phone);
+                if (!e2) break;
+            }
+        }
         user.debt = newDebt;
 
         // ── Montar mensagem WhatsApp ──
-        const pedidoTextoMsg = pedidoTexto.split('\n')
+        const pedidoTextoMsg = pedidoTextoComCredito.split('\n')
             .filter(l => !l.startsWith('💳 CREDITO:'))
             .join('\n');
 
@@ -774,7 +887,44 @@ async function fazerPedido() {
     } catch(err) {
         console.error('Erro ao salvar pedido:', err);
         roboEstado('nao');
+        // Mostrar motivo do erro no subtítulo
+        document.getElementById('roboSub').textContent = err.message || 'Verifique sua internet e tente de novo.';
     }
+}
+
+// ── TELA DE REVISÃO DO PEDIDO ─────────────────────────────────
+function exibirRevisao(pedidoTexto, finalTotal, creditoUsado) {
+    return new Promise(resolve => {
+        // Preencher itens (remove linha de crédito para exibir limpo)
+        const itensLimpos = pedidoTexto.split('\n')
+            .filter(l => l.trim() && !l.startsWith('💳 CREDITO:'))
+            .join('\n');
+        document.getElementById('revisaoItens').textContent = itensLimpos;
+        document.getElementById('revisaoTotalValor').textContent = 'R$ ' + finalTotal.toFixed(2).replace('.', ',');
+
+        const creditoBox = document.getElementById('revisaoCreditoBox');
+        if (creditoUsado > 0) {
+            creditoBox.style.display = 'block';
+            creditoBox.textContent = `💳 Crédito aplicado: - R$ ${creditoUsado.toFixed(2).replace('.', ',')}`;
+        } else {
+            creditoBox.style.display = 'none';
+        }
+
+        const popup = document.getElementById('popupRevisao');
+        popup.style.display = 'flex';
+
+        // Botão cancelar
+        document.getElementById('btnRevisaoCancelar').onclick = () => {
+            popup.style.display = 'none';
+            resolve(false);
+        };
+
+        // Botão confirmar
+        document.getElementById('btnRevisaoConfirmar').onclick = () => {
+            popup.style.display = 'none';
+            resolve(true);
+        };
+    });
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
@@ -872,21 +1022,22 @@ async function iniciarPedido() {
 
 // ── INIT ──────────────────────────────────────────────────────
 window.onload = async () => {
-    // ── Sem parâmetros na URL → fica aguardando, não faz nada ──
     if (!window.location.search) {
         mostrar('telaSemPedido');
         return;
     }
 
-    // Timeout de segurança: 10s sem resposta → tela de login
-    const guard = setTimeout(() => mostrar('telaLogin'), 10000);
+    // Timeout de segurança: 12s sem resposta → tela de erro (não de login)
+    const guard = setTimeout(() => mostrar('telaErroConexao'), 12000);
 
     const savedPhone = localStorage.getItem('salgados_phone');
     if (savedPhone) {
         try {
             const { data: client } = await sb.from('clientes')
                 .select('*').eq('phone', savedPhone).maybeSingle();
+
             if (client) {
+                // Banco respondeu com dados válidos
                 user = {
                     name: client.name, phone: client.phone, debt: client.debt,
                     created_at: client.created_at, oferta_ativa: client.oferta_ativa
@@ -895,9 +1046,22 @@ window.onload = async () => {
                 clearTimeout(guard);
                 await iniciarPedido();
                 return;
+            } else {
+                // Banco retornou null silencioso — usa cache local se tiver
+                const cached = localStorage.getItem('salgados_user');
+                if (cached) {
+                    user = JSON.parse(cached);
+                    clearTimeout(guard);
+                    await iniciarPedido();
+                    return;
+                }
+                // Sem cache → erro de conexão (não joga no login)
+                clearTimeout(guard);
+                mostrar('telaErroConexao');
+                return;
             }
         } catch(e) {
-            // Sem internet — tentar cache local
+            // Exception de rede → tenta cache local
             const cached = localStorage.getItem('salgados_user');
             if (cached) {
                 user = JSON.parse(cached);
@@ -905,9 +1069,14 @@ window.onload = async () => {
                 await iniciarPedido();
                 return;
             }
+            // Sem cache → erro de conexão
+            clearTimeout(guard);
+            mostrar('telaErroConexao');
+            return;
         }
     }
 
+    // Sem telefone salvo → aí sim vai para login (cliente novo)
     clearTimeout(guard);
     mostrar('telaLogin');
 };
