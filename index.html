@@ -764,7 +764,7 @@ async function fazerPedido() {
             customer_name:   user.name,
             customer_phone:  user.phone,
             total:           finalTotal,
-            payment_method:  'PAGA NA ENTREGA',
+            emissor: '👩🏻‍🦰 𝕃𝔸ℝ𝔸',
             items:           pedidoTextoComCredito,
             credito_usado:   creditoUsado
         }).select('id').single();
