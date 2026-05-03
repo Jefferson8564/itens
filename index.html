@@ -700,8 +700,11 @@ function confirmarEstado(estado) {
         rings.forEach(r => r.style.display = 'none');
         emoji.textContent = '📦';
         titulo.textContent = 'Não consegui salvar!';
-        sub.textContent = 'Verifique sua internet e tente de novo.';
+        sub.textContent = 'Não foi possível salvar. Voltando...';
         sub.style.color = 'rgba(255,120,120,0.95)';
+        setTimeout(() => {
+            window.location.href = window.location.origin + window.location.pathname;
+        }, 2500);
     }
 }
 
@@ -1464,13 +1467,19 @@ async function fazerPedido() {
         }
         user.debt = newDebt;
 
-        // Sucesso — sem redirecionamento para WhatsApp
+        // Sucesso — mostra animação e redireciona para histórico
         confirmarEstado('sim');
+        setTimeout(() => {
+            window.location.href = window.location.origin + window.location.pathname;
+        }, 2000);
 
     } catch(err) {
         console.error('Erro ao salvar pedido:', err);
         confirmarEstado('nao');
-        document.getElementById('confirmSub').textContent = err.message || 'Verifique sua internet e tente de novo.';
+        document.getElementById('confirmSub').textContent = 'Não foi possível salvar. Voltando...';
+        setTimeout(() => {
+            window.location.href = window.location.origin + window.location.pathname;
+        }, 2500);
     }
 }
 
