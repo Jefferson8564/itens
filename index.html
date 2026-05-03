@@ -347,21 +347,6 @@
             cursor: pointer; text-decoration: none; display: inline-block;
         }
 
-        /* Popup duplicata */
-        #popupDuplicata {
-            position: fixed; inset: 0; z-index: 500;
-            background: rgba(0,0,0,0.75); backdrop-filter: blur(10px);
-            display: none; align-items: center; justify-content: center;
-            padding: 24px;
-        }
-        #popupDuplicata.ativo { display: flex; }
-        .dup-card {
-            background: #1c2340; border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 24px; padding: 28px 24px;
-            max-width: 360px; width: 100%; text-align: center;
-            animation: loginCardIn 0.3s ease both;
-        }
-
         /* ===== TELA CONFIRMAÇÃO PEDIDO (nova animação) ===== */
         #telaConfirm {
             background: transparent;
@@ -591,22 +576,6 @@
     <button class="btn-voltar" onclick="location.reload()" style="margin-top:20px;">🔄 Atualizar</button>
 </div>
 
-<!-- Popup pedido anterior -->
-<div id="popupDuplicata">
-    <div class="dup-card">
-        <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
-        <div style="font-size:19px;font-weight:900;color:white;margin-bottom:10px;">Pedido anterior encontrado!</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.6);font-weight:500;line-height:1.5;margin-bottom:22px;">
-            Você já fez um pedido há <span id="tempoAnterior" style="color:#f39c12;font-weight:800;">--</span>.<br>
-            O que deseja fazer?
-        </div>
-        <div style="display:flex;gap:10px;">
-            <button onclick="resolverDuplicata('manter')" style="flex:1;padding:14px;background:linear-gradient(135deg,#1aad52,#25d366);border:none;border-radius:14px;color:white;font-size:14px;font-weight:800;cursor:pointer;">✅ Manter os 2</button>
-            <button onclick="resolverDuplicata('cancelar')" style="flex:1;padding:14px;background:linear-gradient(135deg,#c0392b,#e74c3c);border:none;border-radius:14px;color:white;font-size:14px;font-weight:800;cursor:pointer;">❌ Cancelar anterior</button>
-        </div>
-    </div>
-</div>
-
 <!-- Tela confirmação (nova animação - caixinha de pedido) -->
 <div id="telaConfirm" class="tela oculta">
     <div id="confirmInner" class="state-salvando">
@@ -641,8 +610,7 @@ const MODO = window.location.search.length > 1 ? 'expedidos' : 'historico';
 // Dados do modo pedido
 let products = [];
 let msgTemplate = "*NOVO PEDIDO*\nCliente: {nome}\n\n{pedido}\nTotal: R$ {total}\nPagamento: {pagamento}";
-let _pedidoAnteriorId = null;
-let _resolverDuplicata = null;
+
 
 // ===== UTILS =====
 function horasBRT(d) {
@@ -1143,7 +1111,6 @@ function fecharPopupCancelar() {
 document.getElementById('btnConfirmarCancelar').onclick = async function() {
     if (!_cancelarPedidoId) return;
     const pedidoId = _cancelarPedidoId;
-    const totalExibido = _cancelarTotal;
     fecharPopupCancelar();
 
     const card = document.getElementById('pedidoCard_' + pedidoId);
@@ -1155,22 +1122,27 @@ document.getElementById('btnConfirmarCancelar').onclick = async function() {
     }
 
     try {
+        // 1) Busca o pedido completo no banco
         const { data: pedido } = await sb.from('pedidos')
-            .select('id, total, items, credito_usado')
+            .select('id, total, items, credito_usado, customer_name')
             .eq('id', pedidoId).maybeSingle();
 
         if (!pedido) { carregarPedidos(); return; }
 
-        const creditoMatch = (pedido.items || '').match(/💳 CREDITO:([\d.]+)/);
-        const creditoUsado = creditoMatch ? Number(creditoMatch[1]) : (Number(pedido.credito_usado) || 0);
+        // 2) Calcula crédito usado (igual ao ADM: verifica campo do banco E texto dos itens)
+        const creditoMatchA = (pedido.items || '').match(/💳 CREDITO:([\d.]+)/);
+        const creditoUsado = creditoMatchA ? Number(creditoMatchA[1]) : (Number(pedido.credito_usado) || 0);
 
+        // 3) Reverte o saldo do cliente (debt) — busca valor atualizado do banco antes de alterar
         const { data: c } = await sb.from('clientes').select('debt').eq('phone', user.phone).single();
         if (c) {
+            // Reverte exatamente o que foi somado ao debt quando o pedido foi criado: total + creditoUsado
             const novoDebt = (c.debt || 0) - Number(pedido.total) - creditoUsado;
             await sb.from('clientes').update({ debt: novoDebt }).eq('phone', user.phone);
             user.debt = novoDebt;
         }
 
+        // 4) Restaura cupom se havia desconto aplicado no pedido
         try {
             const linhasCupom = (pedido.items || '').split('\n').filter(l => l.includes('CUPOM:'));
             if (linhasCupom.length > 0) {
@@ -1189,18 +1161,22 @@ document.getElementById('btnConfirmarCancelar').onclick = async function() {
             }
         } catch(e) { console.warn('Erro ao restaurar cupom:', e); }
 
+        // 5) Apaga o pedido do banco (igual ao ADM)
         await sb.from('pedidos').delete().eq('id', pedidoId);
 
-        let descNotif = 'Pedido cancelado pelo cliente';
-        if (creditoUsado > 0) descNotif += ` • Crédito R$ ${creditoUsado.toFixed(2).replace('.',',')} devolvido`;
+        // 6) Registra notificação de reembolso com valor total revertido (inclui crédito)
+        const valorReembolso = Number(pedido.total) + creditoUsado;
+        const descNotif = creditoUsado > 0
+            ? `Pedido cancelado — R$ ${Number(pedido.total).toFixed(2).replace('.',',')} + crédito R$ ${creditoUsado.toFixed(2).replace('.',',')} devolvido`
+            : 'Pedido cancelado pelo cliente';
         await sb.from('notificacoes').insert({
             customer_phone: user.phone,
             tipo: 'reembolso',
-            valor: Number(pedido.total) + creditoUsado,
+            valor: valorReembolso,
             descricao: descNotif
         });
 
-        showToast('Pedido cancelado ✓', 'success');
+        showToast('✅ Pedido cancelado e saldo devolvido!', 'success');
         setTimeout(() => carregarPedidos(), 600);
 
     } catch(e) {
@@ -1224,61 +1200,6 @@ function clienteTemOferta() {
     return (Date.now() - new Date(user.created_at).getTime()) / (1000*60*60*24) <= 15;
 }
 
-async function verificarPedidoRecente() {
-    try {
-        const dez = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        const { data } = await sb.from('pedidos')
-            .select('id, created_at')
-            .eq('customer_phone', user.phone)
-            .gte('created_at', dez)
-            .order('created_at', { ascending: false })
-            .limit(1);
-        return (data && data.length > 0) ? data[0] : null;
-    } catch(e) { return null; }
-}
-
-function resolverDuplicata(decisao) {
-    document.getElementById('popupDuplicata').classList.remove('ativo');
-    if (_resolverDuplicata) _resolverDuplicata(decisao);
-}
-
-async function cancelarPedidoAnterior(pedidoId) {
-    try {
-        const { data: pedido } = await sb.from('pedidos')
-            .select('id, total, items, credito_usado')
-            .eq('id', pedidoId).maybeSingle();
-        if (!pedido) return;
-
-        const creditoMatch = (pedido.items || '').match(/💳 CREDITO:([\d.,]+)/);
-        const creditoUsado = creditoMatch ? Number(creditoMatch[1].replace(',','.')) : (Number(pedido.credito_usado) || 0);
-        const { data: c } = await sb.from('clientes').select('debt').eq('phone', user.phone).single();
-        if (c) {
-            const novoDebt = (c.debt || 0) - Number(pedido.total) - creditoUsado;
-            await sb.from('clientes').update({ debt: novoDebt }).eq('phone', user.phone);
-            user.debt = novoDebt;
-        }
-
-        const linhasCupom = (pedido.items || '').split('\n').filter(l => l.includes('CUPOM:'));
-        if (linhasCupom.length > 0) {
-            const parts = linhasCupom[0].split(':');
-            const pct = Number(parts[1]) || 0;
-            if (pct > 0) {
-                await sb.from('premios').insert({
-                    customer_phone: user.phone, customer_name: user.name,
-                    descricao: `🏷️ ${pct}% OFF — ${pct}% de desconto`,
-                    jogo: 'cupom_estornado', tickets_usados: 0, diamantes_usados: 0, cancelado: false
-                });
-            }
-        }
-
-        await sb.from('pedidos').delete().eq('id', pedidoId);
-        await sb.from('notificacoes').insert({
-            customer_phone: user.phone, tipo: 'reembolso',
-            valor: Number(pedido.total) + creditoUsado,
-            descricao: 'Pedido cancelado pelo cliente'
-        });
-    } catch(e) { console.warn('Erro ao cancelar anterior:', e); }
-}
 
 function lerItensURL() {
     function norm(n) {
@@ -1480,24 +1401,8 @@ async function fazerPedido() {
     let pedidoTextoComCredito = pedidoTexto;
     if (creditoUsado > 0) pedidoTextoComCredito += `\n💳 CREDITO:${creditoUsado.toFixed(2)}`;
 
-    // 2. Verificar pedido anterior
-    const pedidoRecente = await verificarPedidoRecente();
-    if (pedidoRecente) {
-        const minAtras = Math.max(1, Math.round((Date.now() - new Date(pedidoRecente.created_at).getTime()) / 60000));
-        _pedidoAnteriorId = pedidoRecente.id;
-        document.getElementById('tempoAnterior').textContent = minAtras + ' min atrás';
-        document.getElementById('popupDuplicata').classList.add('ativo');
 
-        const decisao = await new Promise(res => { _resolverDuplicata = res; });
-
-        if (decisao === 'cancelar') {
-            await cancelarPedidoAnterior(_pedidoAnteriorId);
-            const { data: cAtual } = await sb.from('clientes').select('debt').eq('phone', user.phone).maybeSingle();
-            if (cAtual) user.debt = cAtual.debt;
-        }
-    }
-
-    // 3. Salvar pedido
+    // 2. Salvar pedido
     mostrarTela('telaConfirm');
     confirmarEstado('salvando');
 
