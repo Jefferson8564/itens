@@ -548,7 +548,18 @@
     <div class="pop-card">
         <div style="text-align:center;font-size:36px;margin-bottom:10px;">❌</div>
         <div style="font-size:17px;font-weight:900;color:white;text-align:center;margin-bottom:6px;">Cancelar pedido?</div>
-        <div id="popupCancelarValor" style="text-align:center;font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:24px;"></div>
+        <div id="popupCancelarItens" style="
+            background:rgba(255,255,255,0.05);
+            border:1px solid rgba(255,255,255,0.1);
+            border-radius:14px;
+            padding:12px 14px;
+            margin-bottom:12px;
+            font-size:13px;
+            color:rgba(255,255,255,0.75);
+            line-height:1.7;
+            display:none;
+        "></div>
+        <div id="popupCancelarValor" style="text-align:center;font-size:13px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:18px;"></div>
         <div style="display:flex;gap:10px;">
             <button onclick="fecharPopupCancelar()"
                 style="flex:1;padding:15px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:white;border-radius:16px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;"
@@ -1011,9 +1022,11 @@ async function carregarPedidos() {
 
             var podeCancelar = (p.status === 'Em produção');
             var btnCancelHtml = podeCancelar
-                ? `<button onclick="abrirPopupCancelar('${p.id}', ${total})"
+                ? `<button onclick="abrirPopupCancelar('${p.id}', ${total}, decodeURIComponent(this.dataset.items))"
                         style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);color:#f87171;padding:10px 20px;border-radius:14px;font-size:12px;font-weight:800;cursor:pointer;touch-action:manipulation;letter-spacing:0.2px;transition:all 0.2s;"
-                        ontouchstart="this.style.background='rgba(220,38,38,0.3)'" ontouchend="this.style.background='rgba(220,38,38,0.15)'">
+                        ontouchstart="this.style.background='rgba(220,38,38,0.3)'" ontouchend="this.style.background='rgba(220,38,38,0.15)'"
+                        data-items="${encodeURIComponent(p.items || '')}"
+                        >
                         ❌ Cancelar pedido
                     </button>`
                 : (function() {
@@ -1095,16 +1108,34 @@ async function carregarPedidos() {
     }
 }
 
-function abrirPopupCancelar(pedidoId, total) {
+function abrirPopupCancelar(pedidoId, total, itemsRaw) {
     _cancelarPedidoId = pedidoId;
     _cancelarTotal = total;
+
+    // Monta lista de itens no popup
+    const itensEl = document.getElementById('popupCancelarItens');
+    if (itensEl && itemsRaw) {
+        const linhas = itemsRaw
+            .replace(/✅ /g, '')
+            .split('\n')
+            .filter(l => l.trim() && !l.startsWith('🏷️ CUPOM:') && !l.startsWith('💳 CREDITO:') && !l.includes('━'));
+        if (linhas.length > 0) {
+            itensEl.innerHTML = linhas.map(l => `<div>• ${l.trim()}</div>`).join('');
+            itensEl.style.display = 'block';
+        } else {
+            itensEl.style.display = 'none';
+        }
+    }
+
     document.getElementById('popupCancelarValor').textContent =
-        'Pedido de R$ ' + Number(total).toFixed(2).replace('.', ',');
+        'Total: R$ ' + Number(total).toFixed(2).replace('.', ',');
     document.getElementById('popupCancelar').style.display = 'flex';
 }
 
 function fecharPopupCancelar() {
     document.getElementById('popupCancelar').style.display = 'none';
+    document.getElementById('popupCancelarItens').style.display = 'none';
+    document.getElementById('popupCancelarItens').innerHTML = '';
     _cancelarPedidoId = null;
     _cancelarTotal = 0;
 }
