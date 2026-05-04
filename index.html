@@ -1447,8 +1447,9 @@ async function fazerPedido() {
         // Atualizar status para Em produção
         await sb.from('pedidos').update({ status: 'Em produção' }).eq('id', pedidoInserido.id);
 
-        // Sucesso — sem redirecionamento para WhatsApp
+        // Sucesso — voltar para home após 3 segundos
         confirmarEstado('sim');
+        setTimeout(() => voltarParaInicio(), 3000);
 
     } catch(err) {
         console.error('Erro ao salvar pedido:', err);
