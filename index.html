@@ -1214,27 +1214,31 @@ function lerItensURL() {
     const afterQ = fullHref.split('?')[1] || '';
     if (!afterQ) return null;
 
-    // Blocos por categoria separados por "&" (ex: fritos=...&crus=...)
-    // Dentro de cada bloco, os itens são separados por "=": qtdXnome=qtdXnome...
-    // O "x" entre qtd e nome aceita "x", "×" ou espaço (compatibilidade com formatos antigos)
+    // Formato: fritos=1×frango=1×catupiry&crus=1×frango=1×catupiry
+    // O "=" separa categoria dos itens, e "×" (ou "x") separa os itens entre si
+    // Cada item tem formato: qty×nome  (ex: 1×frango, 2×catupiry)
     const blocos = afterQ.split('&');
 
     blocos.forEach(bloco => {
-        const partes = bloco.split('=').map(p => p.trim()).filter(p => p !== '');
-        if (partes.length === 0) return;
+        if (!bloco) return;
 
-        let categoria = 'fritos';
-        let entradas = partes;
+        // Separa categoria do resto: "fritos=1×frango=1×catupiry"
+        const eqIdx = bloco.indexOf('=');
+        if (eqIdx === -1) return;
 
-        if (/^(fritos|crus)$/i.test(partes[0])) {
-            categoria = partes[0].toLowerCase();
-            entradas = partes.slice(1);
-        }
+        const catPart = bloco.substring(0, eqIdx).trim().toLowerCase();
+        const restoPart = bloco.substring(eqIdx + 1).trim();
 
-        entradas.forEach(entrada => {
-            const m = entrada.match(/^(\d+)\s*[x×]?\s*(.+)$/i);
+        const categoria = /^(fritos|crus)$/.test(catPart) ? catPart : 'fritos';
+
+        // Itens separados por "=": 1×frango=1×catupiry=10×cheddar
+        // Dentro de cada item, × (ou x) separa qty do nome
+        restoPart.split('=').filter(Boolean).forEach(item => {
+            const m = item.match(/^(\d+)[x×](.+)$/i);
             if (m) {
-                itens.push({ qty: parseInt(m[1]), nome: m[2].trim(), categoria });
+                const qty = parseInt(m[1]);
+                const nome = m[2].trim();
+                if (qty > 0 && nome) itens.push({ qty, nome, categoria });
             }
         });
     });
