@@ -1212,34 +1212,34 @@ function lerItensURL() {
     let itens = [];
     const fullHref = decodeURIComponent(window.location.href).replace(/\+/g, ' ');
     const afterQ = fullHref.split('?')[1] || '';
-    const segmentos = afterQ.split('&');
-    let encontrouFormato = false;
+    if (!afterQ) return null;
 
-    segmentos.forEach(seg => {
-        const categoriaMatch = seg.match(/^(fritos|crus)=/i);
-        if (!categoriaMatch) return;
-        encontrouFormato = true;
-        const categoria = categoriaMatch[1].toLowerCase();
-        const re4 = /(?:[^=]*=)(\d+)\s+([^=]+)/g;
-        let m4;
-        while ((m4 = re4.exec(seg)) !== null) {
-            itens.push({ qty: parseInt(m4[1]), nome: m4[2].trim(), categoria });
+    // Blocos por categoria separados por "&" (ex: fritos=...&crus=...)
+    // Dentro de cada bloco, os itens são separados por "=": qtdXnome=qtdXnome...
+    // O "x" entre qtd e nome aceita "x", "×" ou espaço (compatibilidade com formatos antigos)
+    const blocos = afterQ.split('&');
+
+    blocos.forEach(bloco => {
+        const partes = bloco.split('=').map(p => p.trim()).filter(p => p !== '');
+        if (partes.length === 0) return;
+
+        let categoria = 'fritos';
+        let entradas = partes;
+
+        if (/^(fritos|crus)$/i.test(partes[0])) {
+            categoria = partes[0].toLowerCase();
+            entradas = partes.slice(1);
         }
-    });
 
-    if (!encontrouFormato || itens.length === 0) {
-        itens = [];
-        const simpleHref = decodeURIComponent(window.location.href).replace(/\+/g, ' ');
-        const afterQ = simpleHref.split('?')[1] || '';
-        const partes = afterQ.split('=').filter(p => p.trim() !== '');
-        partes.forEach(parte => {
-            const m = parte.trim().match(/^(\d+)\s+(.+)$/);
+        entradas.forEach(entrada => {
+            const m = entrada.match(/^(\d+)\s*[x×]?\s*(.+)$/i);
             if (m) {
-                itens.push({ qty: parseInt(m[1]), nome: m[2].trim(), categoria: 'fritos' });
+                itens.push({ qty: parseInt(m[1]), nome: m[2].trim(), categoria });
             }
         });
-        if (itens.length === 0) return null;
-    }
+    });
+
+    if (itens.length === 0) return null;
 
     const temOferta = clienteTemOferta();
     let pedidoTextoFritos = '';
@@ -1247,15 +1247,27 @@ function lerItensURL() {
     let total = 0;
 
     const FALLBACK_PRECOS = {
-        'fritos': { 'cox. frango': 2.00, 'cox. catupiry': 2.00, 'cox. charque': 2.70, 'r. queijo': 2.00, 'enroladinho': 2.00 },
-        'crus':   { 'cox. frango': 2.00, 'cox. catupiry': 2.00, 'cox. charque': 2.50, 'r. queijo': 2.00, 'salsicha': 2.00 }
+        'fritos': {
+            'cox. frango': 2.00, 'cox. catupiry': 2.00, 'cox. cheddar': 2.00, 'cox. charque': 3.00,
+            'cox. calabresa': 2.00, 'enroladinho': 2.00, 'r. queijo': 2.00, 'r. carne': 2.00,
+            'b. salsicha e queijo': 2.00
+        },
+        'crus': {
+            'cox. frango': 2.00, 'cox. catupiry': 2.00, 'cox. cheddar': 2.00, 'cox. charque': 3.00,
+            'cox. calabresa': 2.00, 'enroladinho': 2.00, 'r. queijo': 2.00, 'r. carne': 2.00,
+            'b. salsicha e queijo': 2.00
+        }
     };
 
     const ALIASES = {
         'queijo': 'r queijo', 'r queijo': 'r queijo', 'enroladinho': 'enroladinho',
         'cox frango': 'cox frango', 'frango': 'cox frango',
         'cox catupiry': 'cox catupiry', 'catupiry': 'cox catupiry',
-        'cox charque': 'cox charque', 'charque': 'cox charque', 'salsicha': 'salsicha'
+        'cox charque': 'cox charque', 'charque': 'cox charque',
+        'cox cheddar': 'cox cheddar', 'cheddar': 'cox cheddar',
+        'cox calabresa': 'cox calabresa', 'calabresa': 'cox calabresa',
+        'r carne': 'r carne', 'carne': 'r carne',
+        'salsicha': 'salsicha'
     };
 
     itens.forEach(({ qty, nome, categoria }) => {
