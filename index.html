@@ -593,6 +593,55 @@
 </div>
 
 <script>
+
+// ═══════════════════════════════════════════
+// SYNC DE SESSÃO ENTRE PÁGINAS (BroadcastChannel)
+// ═══════════════════════════════════════════
+(function() {
+    var _bc = null;
+    try { _bc = new BroadcastChannel('rei_coxinha_session'); } catch(e) {}
+
+    // Ouve mensagens de outras abas/páginas
+    if (_bc) {
+        _bc.onmessage = function(ev) {
+            var msg = ev.data || {};
+            if (msg.type === 'LOGOUT') {
+                // Outra página fez logout: limpar e ir para login
+                localStorage.removeItem('salgados_phone');
+                localStorage.removeItem('salgados_user');
+                var app = document.getElementById('app');
+                if (app && app.style.display !== 'none') {
+                    window.location.reload();
+                }
+            } else if (msg.type === 'LOGIN' && msg.phone) {
+                // Outra página fez login: salvar dados e recarregar se estiver na tela de login
+                localStorage.setItem('salgados_phone', msg.phone);
+                if (msg.user) localStorage.setItem('salgados_user', JSON.stringify(msg.user));
+                var loginScreen = document.getElementById('loginScreen');
+                if (loginScreen && loginScreen.style.display === 'flex') {
+                    window.location.reload();
+                }
+            }
+        };
+    }
+
+    // Escuta também o evento storage (abas em janelas diferentes)
+    window.addEventListener('storage', function(ev) {
+        if (ev.key === 'salgados_phone') {
+            if (!ev.newValue) {
+                var app = document.getElementById('app');
+                if (app && app.style.display !== 'none') window.location.reload();
+            } else if (ev.newValue && !ev.oldValue) {
+                var loginScreen = document.getElementById('loginScreen');
+                if (loginScreen && loginScreen.style.display === 'flex') window.location.reload();
+            }
+        }
+    });
+
+    // Expõe helpers globais usados pelas funções de login/logout
+    window._bcSend = function(msg) { if (_bc) _bc.postMessage(msg); };
+})();
+
 // ===== CONFIG =====
 const SUPABASE_URL = "https://vpeyqgijajywgswmezlh.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwZXlxZ2lqYWp5d2dzd21lemxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNTM1MDIsImV4cCI6MjA4NjgyOTUwMn0.LA5Cbof7IKWAA7l8YbCuPzANpCy0rX_Dro4l9fcDgoQ";
